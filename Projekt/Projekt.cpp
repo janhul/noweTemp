@@ -6,7 +6,7 @@
 
 #define LICZBA_OB_TEXTUR 2
 unsigned int obiektyTextur[LICZBA_OB_TEXTUR];
-const char* plikiTextur[LICZBA_OB_TEXTUR] = { "./textures/metal.png", "./textures/interfejs.png" };
+const char* plikiTextur[LICZBA_OB_TEXTUR] = { "textures/metal.png", "textures/interfejs.png" };
 
 // Stałe projekcji
 enum {
@@ -80,14 +80,26 @@ GLuint wczytajTeksture(const char* nazwaPliku) {
     GLuint idTekstury;
     glGenTextures(1, &idTekstury);
 
+    // Enable image flipping to properly orient textures
+    stbi_set_flip_vertically_on_load(true);
+    
     GLint iWidth, iHeight, nrChannels;
 
     unsigned char* data = stbi_load(nazwaPliku, &iWidth, &iHeight, &nrChannels, 0);
     if (!data) {
         std::cerr << "Nie udalo sie zaladowac tekstury: " << nazwaPliku << std::endl;
-        return 0;
+        // Try alternate path if the texture loading fails
+        std::string altPath = "../";
+        altPath += nazwaPliku;
+        std::cout << "Próba alternatywnej ścieżki: " << altPath << std::endl;
+        data = stbi_load(altPath.c_str(), &iWidth, &iHeight, &nrChannels, 0);
+        
+        if (!data) {
+            std::cerr << "Nie udalo sie zaladowac tekstury z alternatywnej ścieżki." << std::endl;
+            return 0;
+        }
     }
-    std::cout << iWidth << "  " << iHeight << "\t" << nrChannels << std::endl;
+    std::cout << "Załadowano teksturę: " << nazwaPliku << " (" << iWidth << "x" << iHeight << ", kanały: " << nrChannels << ")" << std::endl;
 
     GLenum format = GL_RGB;
     if (nrChannels == 1)
@@ -96,19 +108,15 @@ GLuint wczytajTeksture(const char* nazwaPliku) {
         format = GL_RGB;
     else if (nrChannels == 4)
         format = GL_RGBA;
+    
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glBindTexture(GL_TEXTURE_2D, idTekstury);
     glTexImage2D(GL_TEXTURE_2D, 0, format, iWidth, iHeight, 0, format, GL_UNSIGNED_BYTE, data);
-
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    //stbi_set_flip_vertically_on_load(true);
-
-
 
     stbi_image_free(data);
 
@@ -489,10 +497,10 @@ void rysujKuchenke() {
     glBindTexture(GL_TEXTURE_2D, obiektyTextur[1]); // Interfejs
 
     glBegin(GL_QUADS);
-    glTexCoord2f(0.9f, 1.0f); glVertex3f(0.0f, -0.5f, 0.0f); 
-    glTexCoord2f(0.1f, 1.0f); glVertex3f(1.0f, -0.5f, 0.0f);
-    glTexCoord2f(0.1f, 0.0f); glVertex3f(1.0f, 0.5f, 0.0f);
-    glTexCoord2f(0.9f, 0.0f); glVertex3f(0.0f, 0.5f, 0.0f);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f, -0.5f, 0.0f); 
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(1.0f, -0.5f, 0.0f);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(1.0f, 0.5f, 0.0f);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f, 0.5f, 0.0f);
     glEnd();
 
     glPopMatrix();
@@ -605,10 +613,21 @@ int main(void)
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, key_callback);
 
+    // Configure texture settings before loading textures
     glEnable(GL_TEXTURE_2D);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
+    // Initialize textures
     inicjalizujTekstury();
+    
+    // Check if textures were loaded properly
+    for (int i = 0; i < LICZBA_OB_TEXTUR; i++) {
+        if (obiektyTextur[i] == 0) {
+            std::cerr << "Błąd: Tekstura " << i << " nie została załadowana poprawnie." << std::endl;
+        } else {
+            std::cout << "Tekstura " << i << " załadowana poprawnie (ID: " << obiektyTextur[i] << ")" << std::endl;
+        }
+    }
 
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -680,6 +699,7 @@ int main(void)
         glfwPollEvents();
     }
 
+    // Properly delete textures before terminating
     glDeleteTextures(LICZBA_OB_TEXTUR, obiektyTextur);
 
     glfwTerminate();
