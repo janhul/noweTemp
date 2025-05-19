@@ -1,8 +1,8 @@
 ﻿#include <GLFW/glfw3.h>
 #include <iostream>
 #include <stdlib.h>
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <GLFW/stb_image.h>
 
 #define LICZBA_OB_TEXTUR 2
 unsigned int obiektyTextur[LICZBA_OB_TEXTUR];
@@ -81,7 +81,7 @@ GLuint wczytajTeksture(const char* nazwaPliku) {
     glGenTextures(1, &idTekstury);
 
     // Enable image flipping to properly orient textures
-    stbi_set_flip_vertically_on_load(true);
+    //stbi_set_flip_vertically_on_load(true);
     
     GLint iWidth, iHeight, nrChannels;
 
@@ -120,6 +120,11 @@ GLuint wczytajTeksture(const char* nazwaPliku) {
 
     stbi_image_free(data);
 
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        std::cerr << "OpenGL error after glTexImage2D: " << err << std::endl;
+    }
+
     return idTekstury;
 }
 
@@ -127,9 +132,11 @@ GLuint wczytajTeksture(const char* nazwaPliku) {
 void inicjalizujTekstury() {
     glGenTextures(LICZBA_OB_TEXTUR, obiektyTextur);
 
-    for (int i = 0; i < LICZBA_OB_TEXTUR; i++) {
-        obiektyTextur[i] = wczytajTeksture(plikiTextur[i]);
-    }
+    //for (int i = 0; i < LICZBA_OB_TEXTUR; i++) {
+    //    obiektyTextur[i] = wczytajTeksture(plikiTextur[i]);
+    //}
+    obiektyTextur[0] = wczytajTeksture(plikiTextur[0]);
+    obiektyTextur[1] = wczytajTeksture(plikiTextur[1]);
 }
 
 void key_callback(GLFWwindow* window, int klawisz, int scancode, int akcja, int mody) {
@@ -627,6 +634,10 @@ int main(void)
         } else {
             std::cout << "Tekstura " << i << " załadowana poprawnie (ID: " << obiektyTextur[i] << ")" << std::endl;
         }
+    }
+
+    for (int i = 0; i < LICZBA_OB_TEXTUR; i++) {
+        std::cout << plikiTextur[i];
     }
 
     glEnable(GL_LIGHTING);
